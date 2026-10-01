@@ -276,13 +276,19 @@ f.addEventListener("submit", async e=>{
   }
   btn.disabled=true; btn.textContent="Sending…";
   try{
+    if(!/^https:\/\/script\.google\.com\/macros\/s\/.+\/exec$/.test(SCRIPT_URL))
+      throw new Error("SCRIPT_URL is not a deployed web app URL ending in /exec: "+SCRIPT_URL);
     const res = await fetch(SCRIPT_URL,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(collect())});
-    const out = await res.json();
-    if(!out.ok) throw new Error(out.error||"Unknown error");
+    const text = await res.text();
+    let out;
+    try{ out = JSON.parse(text); }
+    catch(_){ throw new Error("Script did not return JSON (HTTP "+res.status+"). Usually means web app access is not set to 'Anyone'. Response starts: "+text.slice(0,200)); }
+    if(!out.ok) throw new Error("Script error: "+(out.error||"Unknown error"));
     f.classList.add("hidden");
     document.getElementById("done").classList.remove("hidden");
     window.scrollTo({top:0,behavior:"smooth"});
   }catch(err){
+    console.error("[DBR form] Submit failed:", err);
     msg.textContent="The form didn't send. Check your connection and try again, or call 509-222-0129.";
     msg.classList.remove("hidden");
     btn.disabled=false; btn.textContent="Send cutting instructions";
